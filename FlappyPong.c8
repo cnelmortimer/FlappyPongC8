@@ -1,0 +1,213 @@
+# N.C. Cruz (University of Almeria, 2017)
+# Data
+
+: splash1
+	0xF4 0x84 0xE4 0x84 0x87 #FL
+	0x4F 0xA9 0xEF 0xA8 0xA8 #AP
+	0xF5 0x95 0xF7 0x82 0x82 #PY
+	0xF0 0x90 0xF7 0x85 0x87 #Po
+	0x03 0x94 0xD4 0xB5 0x97 #ng
+	0x17 0x94 0xD4 0xB4 0x97 #NC
+	0xEE 0x89 0x8E 0x89 0xE9 #Cr
+	0xAF 0xA1 0xA6 0xA8 0xEF #uz
+: wall
+	0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0 0xC0
+: winlogo
+	0x81 0x7E 0x7E 0x3C 0x18 0x18 0x24 0x7E 0x00 0x00 0xE0 0x80 0xD7 0x95 0x95 
+: score
+	0 0 0 	# Storage for hundreds, tens and ones:
+# Functions
+
+: waitV0
+	delay := v0
+	loop
+		v0 := delay
+		if v0 != 0 then
+	again
+	return
+
+: showSplash
+	v0 := 8		# X
+	v1 := 10	# Y
+	v2 := 0		# Loop variable
+	v3 := 5		# Vertical length of letters
+	i := splash1	# Initial zone of interest in memory
+	loop 
+		sprite v0 v1 5			# Display the current zone of i register
+		v0 += 9				# Move X
+		if v2 == 2 then v0 += 4		# Space for another word
+		v2 += 1				# Increment the index
+		i += v3				# Move the focus in memory
+		if v2 == 5 then v0 := 18	# Adapt X for a shorter sentence
+		if v2 == 5 then v1 += 9		# Move Y to the next line
+		if v2 == 6 then v0 += 2		# Move space 
+		if v2 != 8 then			# Loop conditions <8 items>
+	again
+	return
+
+: createBar
+	v6 := 40	# Bar's X 	
+	v7 := random 3 # Type of bar (4 ad-hoc types). Hole size: 4
+	return
+
+: plotBar
+	if v7 == 0 then plotBar0
+	if v7 == 1 then plotBar1
+	if v7 == 2 then plotBar2
+	if v7 == 3 then plotBar3
+	return
+
+: plotBar0
+	v0 := 4
+	sprite v6 v0 15
+	v0 += 15
+	sprite v6 v0 13
+	return
+
+: plotBar1
+	v0 := 0
+	sprite v6 v0 14
+	v0 += 18
+	sprite v6 v0 14
+	return
+
+: plotBar2
+	v0 := 0
+	sprite v6 v0 10
+	v0 += 14
+	sprite v6 v0 15
+	v0 += 15
+	sprite v6 v0 3
+	return
+
+: plotBar3
+	v0 := 0
+	sprite v6 v0 6
+	v0 += 10
+	sprite v6 v0 15
+	v0 += 15
+	sprite v6 v0 7
+	return
+
+: setUp
+	vc := 0		# My Score
+	ve := 6		# X Ball position
+	vd := 15	# Y Ball position
+	i := score
+	bcd vc		# Reset that zone in memory (otherwise, it is left dirty at dead)
+
+	clear
+	v3 := 48	# Let's paint the initial score to be overriden
+	v4 := 13
+	i := hex v0
+	loop
+		sprite v3 v4 5
+		v3 += 5
+		if v3 != 63 then
+	again
+	v3 := 44	# Let's paint the wall between the score and the map
+	v4 := 0
+
+	i := wall	# I is pointed to the wall for the ball and the wall
+
+	loop		# 'Slow' barrier painting
+		sprite v3 v4 2
+		v4 += 2
+		if v4 != 32 then
+	again
+	
+	createBar 	# Bar represented in v6, v7 and v8
+	plotBar
+
+	sprite ve vd 2 	# Paint the ball
+	
+	return
+
+: showScore
+	v4 := 13	# Y of the score
+	v5 := 0		# Loop index
+	i := score
+	loop
+		load v2
+		v3 := 48
+		i := hex v0    	# hundreds
+		sprite v3 v4 5
+		v3 += 5
+		i := hex v1    	# tens
+		sprite v3 v4 5
+		v3 += 5
+		i := hex v2    	# ones
+		sprite v3 v4 5
+		v5 += 1
+		i := score
+		bcd vc
+		if v5 != 2 then	# We have to loop 2 times: one to paint the previous score (and hence remove it from the screen), and another with the real
+	again
+	i := wall	# As we finished, we have to leave i aiming at the wall (to avoid re-assigning in the game loop)
+	if vc == 255 then endScreen
+	return
+
+: endScreen
+	clear
+	v0 := 29
+	v1 := 5
+	v2 := 10
+	i := winlogo # We are here because we won
+	if vc == 255 then sprite v0 v1 15	# Victory logo
+	if vc != 255 then i += v2		# Pointing just to the 'Fin' label (No cup)
+	if vc != 255 then sprite v0 v1 5	
+	ve := 0		# We are now here, hence, we cannot allow the process to call this
+	vf := 0		# again! If we came back and we were with vf = 1, vd = 31... at that
+	vd := 0		# instant, this function would be called again! (look the set of conditions
+	v0 := 120	# at the end of the update function)
+	waitV0
+	v0 := key	#Forcing waiting
+	clear		# We will use ve := 0 as a 'end of game' flag (formerly vc := 255)
+	return	
+
+: update
+	# We have to know that i points to the wall/ball (the counter keep it right)
+	plotBar
+	v1 := 2
+	v6 -= v1
+	plotBar
+	
+	if v6 == 0 then plotBar	# Clean the old
+	if v6 == 0 then createBar # Create the new
+	if v6 == 40 then plotBar # Plot the new
+
+	sprite ve vd 2 	# Paint the current ball
+	v1 := 5		# Press 5 to play
+	v2 := 1
+	if v1 -key then vd += v2
+	if v1 key then vd -= v2
+	sprite ve vd 2 	# Paint the new ball
+
+	if vf == 1 then endScreen 	# Collision
+	if vd == 31 then endScreen	# End of zone (down)
+	if vd == 255 then endScreen	# End of zone (up)
+	if vc == 255 then endScreen	# We won	
+	if ve == v6 then vc += 1	# Increment your points
+
+	return
+
+: game
+	setUp
+	loop
+		v9 := vc	# Pre-backup to decide if updathe the counter or not
+		update
+		if ve == 0 then return
+		if v9 != vc then showScore	# Only update when necessary
+		v0 := 2		# Adjust to your interpreter or hadware...
+		waitV0			
+	again
+	return
+
+: main
+	loop
+		showSplash
+		v0 := 8
+		waitV0
+		v3 := 5
+		if v3 key then game
+	again
