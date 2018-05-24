@@ -143,8 +143,7 @@
 		bcd vc
 		if v5 != 2 then	# We have to loop 2 times: one to paint the previous score (and hence remove it from the screen), and another with the real
 	again
-	i := wall	# As we finished, we have to leave i aiming at the wall (to avoid re-assigning in the game loop)
-	if vc == 255 then endScreen
+	i := wall	# As we finished, we have to leave i aiming at the wall (to avoid re-assigning in the game loop) #if vc == 255 then endScreen # Unnecessary check
 	return
 
 : endScreen
